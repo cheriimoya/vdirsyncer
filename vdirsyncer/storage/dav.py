@@ -564,7 +564,7 @@ class DAVStorage(Storage):
             headers["If-Match"] = etag
 
         response = await self.session.request(
-            "PUT", href, data=item.raw.encode("utf-8"), headers=headers
+            "PUT", href, data=item.cleaned.encode("utf-8"), headers=headers
         )
 
         await _assert_multistatus_success(response)

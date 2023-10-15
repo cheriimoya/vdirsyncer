@@ -42,6 +42,16 @@ class Item:
     def __init__(self, raw):
         assert isinstance(raw, str), type(raw)
         self._raw = raw
+        self.cleaned = self.strip_CLASS(raw)
+
+    def strip_CLASS(self, raw: str):
+        """Remove the CLASS: attribute"""
+        lines = []
+        for line in raw.split('\n'):
+            if line.startswith('CLASS:'):
+                continue
+            lines.append(line)
+        return '\n'.join(lines)
 
     def with_uid(self, new_uid):
         parsed = _Component.parse(self.raw)
