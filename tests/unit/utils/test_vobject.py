@@ -383,3 +383,47 @@ def test_component_contains():
 
     with pytest.raises(ValueError):
         42 in item  # noqa: B015
+
+
+def test_class_removed_only():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "CLASS:PRIVATE",
+            "SUMMARY:Test",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "CLASS:" not in cleaned
+    assert "SUMMARY:Test" in cleaned
+
+
+def test_normalize_item_ignores_dtstamp_and_uid():
+    # Items differing only by DTSTAMP or UID should normalize equal
+    a = "\r\n".join(
+        [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "BEGIN:VEVENT",
+            "UID:AAA",
+            "DTSTAMP:20240101T000000Z",
+            "SUMMARY:S",
+            "END:VEVENT",
+            "END:VCALENDAR",
+        ]
+    )
+    b = "\r\n".join(
+        [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "BEGIN:VEVENT",
+            "UID:BBB",
+            "DTSTAMP:20250101T000000Z",
+            "SUMMARY:S",
+            "END:VEVENT",
+            "END:VCALENDAR",
+        ]
+    )
+
+    assert normalize_item(a) == normalize_item(b)
