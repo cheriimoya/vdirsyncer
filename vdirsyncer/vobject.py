@@ -12,7 +12,7 @@ IGNORE_PROPS = (
     "PRODID",
     # Sometimes METHOD:PUBLISH is added by WebCAL providers, for us it doesn't
     # make a difference
-    "METHOD",
+    # "METHOD",
     # X-RADICALE-NAME is used by radicale, because hrefs don't really exist in
     # their filesystem backend
     "X-RADICALE-NAME",
@@ -42,13 +42,13 @@ class Item:
     def __init__(self, raw):
         assert isinstance(raw, str), type(raw)
         self._raw = raw
-        self.cleaned = self.strip_CLASS(raw)
+        self.cleaned = self.strip_CLASS_and_METHOD(raw)
 
-    def strip_CLASS(self, raw: str):
-        """Remove the CLASS: attribute"""
+    def strip_CLASS_and_METHOD(self, raw: str):
+        """Remove the CLASS: attribute, this is needed for SOGo to Nextcloud sync"""
         lines = []
         for line in raw.split('\n'):
-            if line.startswith('CLASS:'):
+            if line.startswith('CLASS:') or line.startswith('METHOD:'):
                 continue
             lines.append(line)
         return '\n'.join(lines)
