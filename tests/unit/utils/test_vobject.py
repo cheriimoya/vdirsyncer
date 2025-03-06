@@ -399,6 +399,43 @@ def test_class_removed_only():
     assert "SUMMARY:Test" in cleaned
 
 
+def test_method_removed_only():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "METHOD:PUBLISH",
+            "SUMMARY:Test",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "METHOD:" not in cleaned
+    assert "SUMMARY:Test" in cleaned
+
+
+def test_split_collection_removes_method_from_vcalendar_wrapper():
+    # VCALENDAR wrapper contains METHOD which should be stripped when splitting
+    vcal = "\r\n".join(
+        [
+            "BEGIN:VCALENDAR",
+            "VERSION:2.0",
+            "METHOD:PUBLISH",
+            "BEGIN:VEVENT",
+            "UID:abc",
+            "DTSTART:20250101T090000Z",
+            "END:VEVENT",
+            "END:VCALENDAR",
+        ]
+    )
+
+    parts = list(vobject.split_collection(vcal))
+    assert len(parts) == 1
+    # METHOD must be removed at wrapper level in each split part
+    assert "\nMETHOD:" not in parts[0]
+    # VERSION should still be present
+    assert "\nVERSION:2.0" in parts[0]
+
+
 def test_normalize_item_ignores_dtstamp_and_uid():
     # Items differing only by DTSTAMP or UID should normalize equal
     a = "\r\n".join(
