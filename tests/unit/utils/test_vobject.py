@@ -464,3 +464,55 @@ def test_normalize_item_ignores_dtstamp_and_uid():
     )
 
     assert normalize_item(a) == normalize_item(b)
+
+
+def test_rrule_count_zero_removed_simple():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "DTSTART:20250101T090000Z",
+            "RRULE:FREQ=DAILY;COUNT=0",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "COUNT=0" not in cleaned
+    assert "RRULE:FREQ=DAILY" in cleaned
+
+
+def test_rrule_count_zero_removed_in_middle():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "RRULE:FREQ=WEEKLY;COUNT=0;BYDAY=TU,TH",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "COUNT=0" not in cleaned
+    assert "RRULE:FREQ=WEEKLY;BYDAY=TU,TH" in cleaned
+
+
+def test_rrule_count_zero_multiple_zeroes_removed():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "RRULE:FREQ=MONTHLY;COUNT=000;BYMONTHDAY=1",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "COUNT=0" not in cleaned
+    assert "RRULE:FREQ=MONTHLY;BYMONTHDAY=1" in cleaned
+
+
+def test_rrule_unaffected_when_count_nonzero():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "RRULE:FREQ=DAILY;COUNT=10",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "RRULE:FREQ=DAILY;COUNT=10" in cleaned

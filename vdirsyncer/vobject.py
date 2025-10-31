@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import hashlib
+import re
 from itertools import chain
 from itertools import tee
 
@@ -42,15 +43,33 @@ class Item:
     def __init__(self, raw):
         assert isinstance(raw, str), type(raw)
         self._raw = raw
-        self.cleaned = self.strip_CLASS_and_METHOD(raw)
+        self.cleaned = self.sanitize_for_transport(raw)
 
-    def strip_CLASS_and_METHOD(self, raw: str):
-        """Remove the CLASS: attribute, this is needed for SOGo to Nextcloud sync"""
+    def sanitize_for_transport(self, raw: str):
+        """Remove problematic properties and sanitize invalid RRULEs for upload."""
         lines = []
         for line in raw.split('\n'):
             # Drop CLASS and METHOD lines entirely
             if line.startswith('CLASS:') or line.startswith('METHOD:'):
                 continue
+
+            # Sanitize RRULE with illegal COUNT=0 produced by some servers (e.g., SOGo)
+            if line.startswith('RRULE:') or line.startswith('RRULE;'):
+                # Remove any COUNT=0 (with any number of leading zeros) from the value part
+                # e.g. RRULE:FREQ=DAILY;COUNT=0 -> RRULE:FREQ=DAILY
+                def _remove_count_zero(param_str: str) -> str:
+                    return re.sub(r'(?:(?<=;)|^)(COUNT=0+)(?=;|$)', '', param_str)
+
+                if ':' in line:
+                    before, after = line.split(':', 1)
+                    sanitized_after = _remove_count_zero(after)
+                    sanitized_after = re.sub(r';{2,}', ';', sanitized_after).rstrip(';')
+                    line = f"{before}:{sanitized_after}"
+                else:
+                    # Unusual, but fall back to whole-line sanitation
+                    line = _remove_count_zero(line)
+                    line = re.sub(r';{2,}', ';', line).rstrip(';')
+
             lines.append(line)
         return '\n'.join(lines)
 
