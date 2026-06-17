@@ -516,3 +516,36 @@ def test_rrule_unaffected_when_count_nonzero():
     )
     cleaned = vobject.Item(raw).cleaned
     assert "RRULE:FREQ=DAILY;COUNT=10" in cleaned
+
+
+def test_duplicate_dtstamp_deduplicated():
+    # SOGo appends DTSTAMP instead of replacing it, producing multiple occurrences
+    # which violates RFC 5545. Only the last one should survive.
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "DTSTAMP:20240101T000000Z",
+            "DTSTAMP:20240601T000000Z",
+            "DTSTAMP:20260617T161205Z",
+            "SUMMARY:Test",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert cleaned.count("DTSTAMP:") == 1
+    assert "DTSTAMP:20260617T161205Z" in cleaned
+    assert "SUMMARY:Test" in cleaned
+
+
+def test_single_dtstamp_preserved():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "DTSTAMP:20240101T000000Z",
+            "SUMMARY:Test",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "DTSTAMP:20240101T000000Z" in cleaned
+    assert "SUMMARY:Test" in cleaned

@@ -47,10 +47,24 @@ class Item:
 
     def sanitize_for_transport(self, raw: str):
         """Remove problematic properties and sanitize invalid RRULEs for upload."""
+        split_lines = raw.split('\n')
+
+        # SOGo appends a new DTSTAMP on every sync instead of replacing, producing
+        # multiple occurrences which violates RFC 5545 (DTSTAMP MUST occur exactly once).
+        # Keep only the last occurrence so SabreDAV/Nextcloud accepts the payload.
+        last_dtstamp_idx = None
+        for i, line in enumerate(split_lines):
+            if line.startswith('DTSTAMP:'):
+                last_dtstamp_idx = i
+
         lines = []
-        for line in raw.split('\n'):
+        for i, line in enumerate(split_lines):
             # Drop CLASS and METHOD lines entirely
             if line.startswith('CLASS:') or line.startswith('METHOD:'):
+                continue
+
+            # Drop all but the last DTSTAMP
+            if line.startswith('DTSTAMP:') and i != last_dtstamp_idx:
                 continue
 
             # Sanitize RRULE with illegal COUNT=0 produced by some servers (e.g., SOGo)
