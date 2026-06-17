@@ -593,7 +593,24 @@ class DAVStorage(Storage):
 
     async def upload(self, item: Item):
         href = self._get_href(item)
-        rv = await self._put(href, item, None)
+        try:
+            rv = await self._put(href, item, None)
+        except exceptions.PreconditionFailed:
+            # If-None-Match: * was rejected — item already exists on the server
+            # (e.g. SOGo receives scheduling invitations and doesn't expose them
+            # in PROPFIND, so vdirsyncer never sees an ETag and keeps retrying
+            # creation). Fetch the current ETag via REPORT and update instead.
+            try:
+                _, existing_etag = await self.get(href)
+            except exceptions.NotFoundError:
+                # Server has the item but won't serve it via REPORT either.
+                # This is a CalDAV scheduling event managed by the server's
+                # iTIP engine (e.g. SOGo). It already exists there; skip it.
+                raise exceptions.ServerManagedItem(
+                    f"{href!r} is managed by the server's scheduling engine "
+                    f"and cannot be updated via CalDAV PUT."
+                )
+            rv = await self._put(href, item, existing_etag)
         return rv
 
     async def delete(self, href, etag):

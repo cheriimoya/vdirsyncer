@@ -81,3 +81,9 @@ class UnsupportedMetadataError(Error, NotImplementedError):
 
 class CollectionRequired(Error):
     """`collection = null` is not allowed."""
+
+
+class ServerManagedItem(Error):
+    """Item is managed internally by the server (e.g. CalDAV scheduling
+    invitations in SOGo) and cannot be created or updated via CalDAV PUT.
+    The server already has the item; syncing it is a no-op."""

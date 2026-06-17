@@ -19,6 +19,7 @@ import logging
 from vdirsyncer.storage.base import Storage
 from vdirsyncer.vobject import Item
 
+from ..exceptions import ServerManagedItem
 from ..exceptions import UserError
 from ..utils import uniq
 from .exceptions import BothReadOnly
@@ -210,7 +211,15 @@ class Upload(Action):
             sync_logger.info(
                 f"Copying (uploading) item {self.ident} to {self.dest.storage}"
             )
-            href, etag = await self.dest.storage.upload(self.item)
+            try:
+                href, etag = await self.dest.storage.upload(self.item)
+            except ServerManagedItem as e:
+                sync_logger.info(f"Skipping {self.ident}: {e}")
+                # Roll back the new_status row that prepare_new_status created
+                # for the A side (it has hash_b=NULL which would fail the NOT
+                # NULL constraint on commit if left in place).
+                a.status.parent.rollback(self.ident)
+                return
             assert href is not None
 
         self.dest.status.insert_ident(
