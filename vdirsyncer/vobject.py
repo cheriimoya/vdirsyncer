@@ -67,6 +67,13 @@ class Item:
             if line.startswith('DTSTAMP:') and i != last_dtstamp_idx:
                 continue
 
+            # Strip parameters only valid on ATTENDEE (not ORGANIZER) per RFC 5545.
+            # SOGo/clients sometimes produce ORGANIZER;PARTSTAT=...;CUTYPE=...: which
+            # causes SOGo to treat the event as a scheduling invitation, hiding it from
+            # PROPFIND and causing perpetual 412s when vdirsyncer tries to create it.
+            if re.match(r'ORGANIZER[;:]', line):
+                line = re.sub(r';(?:PARTSTAT|CUTYPE)=[^;:]*', '', line)
+
             # Sanitize RRULE with illegal COUNT=0 produced by some servers (e.g., SOGo)
             if line.startswith('RRULE:') or line.startswith('RRULE;'):
                 # Remove any COUNT=0 (with any number of leading zeros) from the value part

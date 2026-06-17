@@ -549,3 +549,33 @@ def test_single_dtstamp_preserved():
     cleaned = vobject.Item(raw).cleaned
     assert "DTSTAMP:20240101T000000Z" in cleaned
     assert "SUMMARY:Test" in cleaned
+
+
+def test_organizer_invalid_params_stripped():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "ORGANIZER;CN=Max;PARTSTAT=NEEDS-ACTION;CUTYPE=INDIVIDUAL:mailto:max@example.com",
+            "SUMMARY:Test",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "PARTSTAT" not in cleaned
+    assert "CUTYPE" not in cleaned
+    assert "ORGANIZER;CN=Max:mailto:max@example.com" in cleaned
+    assert "SUMMARY:Test" in cleaned
+
+
+def test_organizer_without_invalid_params_unchanged():
+    raw = "\n".join(
+        [
+            "BEGIN:VEVENT",
+            "ORGANIZER;CN=Max:mailto:max@example.com",
+            "SUMMARY:Test",
+            "END:VEVENT",
+        ]
+    )
+    cleaned = vobject.Item(raw).cleaned
+    assert "ORGANIZER;CN=Max:mailto:max@example.com" in cleaned
+    assert "SUMMARY:Test" in cleaned
